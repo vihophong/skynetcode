@@ -20,7 +20,9 @@ export SKYNETSYS=/home/phong/projects/SkyNet/install/skynet-install/lib/cmake/Sk
 export MKLROOT=/opt/intel/compilers_and_libraries/linux/mkl
 
 
-go to parent directory
+Go to parent directory
+
+
 mkdir build-skynetcode
 cd build-skynetcode
 cmake ../skynetcode
