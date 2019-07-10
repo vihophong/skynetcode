@@ -14,80 +14,126 @@
 #include "DensityProfiles/ExpTMinus3.hpp"
 #include "Reactions/REACLIBReactionLibrary.hpp"
 
-int main(int, char**) {
-  auto nuclib = NuclideLibrary::CreateFromWebnucleoXML(
-      SkyNetRoot + "/data/webnucleo_nuc_v2.0.xml");
+int main(int argc, char**argv) {
+    //! read inputs
 
-  NetworkOptions opts;
-  opts.ConvergenceCriterion = NetworkConvergenceCriterion::Mass;
-  opts.MassDeviationThreshold = 1.0E-10;
-  opts.IsSelfHeating = true;
-  opts.EnableScreening = true;
+    // default input: BH-BH merger
+    double T0 = 6.0;
+    double Ye = 0.01;
+    double s = 10.0;
+    double tau = 7.1;
 
-  SkyNetScreening screen(nuclib);
-  HelmholtzEOS helm(SkyNetRoot + "/data/helm_table.dat");
+    char outputname[500];
+    sprintf(outputname,"SkyNet_r-process");
 
-  REACLIBReactionLibrary strongReactionLibrary(SkyNetRoot + "/data/reaclib",
-      ReactionType::Strong, true, LeptonMode::TreatAllAsDecayExceptLabelEC,
-      "Strong reactions", nuclib, opts, true);
-  REACLIBReactionLibrary symmetricFission(SkyNetRoot +
-      "/data/netsu_panov_symmetric_0neut", ReactionType::Strong, false,
-      LeptonMode::TreatAllAsDecayExceptLabelEC,
-      "Symmetric neutron induced fission with 0 free neutrons", nuclib, opts,
-      false);
-  REACLIBReactionLibrary spontaneousFission(SkyNetRoot +
-      "/data/netsu_sfis_Roberts2010rates", ReactionType::Strong, false,
-      LeptonMode::TreatAllAsDecayExceptLabelEC, "Spontaneous fission", nuclib,
-      opts, false);
+    char reaclibdatabasechar[500];
+    std::string reaclibdatabase=SkyNetRoot + "data/reaclib";
 
-  // use only REACLIB weak rates
-  REACLIBReactionLibrary weakReactionLibrary(SkyNetRoot + "/data/reaclib",
-      ReactionType::Weak, false, LeptonMode::TreatAllAsDecayExceptLabelEC,
-      "Weak reactions", nuclib, opts, true);
+    std::cout<<"\n\n ***************** \n\nUsaged: ./r-process initial_condition path_to_output_file path_to_reaclib \n\n ***************** \n\n"<<std::endl;
 
-  // or use the following code to use FFN rates and weak REACLIB rates
-  // pre-computed with the <SkyNetRoot>/examples/precompute_reaction_libs.py
-  // script
-//  auto ffnMesaReactionLibrary = FFNReactionLibrary::ReadFromDisk(
-//      "ffnMesa_with_neutrino", opts);
-//  auto ffnReactionLibrary = FFNReactionLibrary::ReadFromDisk(
-//      "ffn_with_neutrino_ffnMesa", opts);
-//  auto weakReactionLibrary = REACLIBReactionLibrary::ReadFromDisk(
-//      "weak_REACLIB_with_neutrino_ffnMesa_ffn", opts);
+    if (argc>1&&argc<5){
+        std::ifstream ifs(argv[1]);
+        char temp[500];
+        ifs>>temp>>T0;
+        ifs>>temp>>Ye;
+        ifs>>temp>>s;
+        ifs>>temp>>tau;
+        if (argc>2){
+            sprintf(outputname,"%s",argv[2]);
+        }
+        if (argc==4){
+            sprintf(reaclibdatabasechar,"%s",argv[3]);
+            reaclibdatabase=std::string(reaclibdatabasechar);
+        }
+    }
 
-  // add neutrino reactions, if desired (will need a neutrino distribution
-  // function set with net.LoadNeutrinoHistory(...))
-//  NeutrinoReactionLibrary neutrinoLibrary(SkyNetRoot
-//     + "/data/neutrino_reactions.dat", "Neutrino interactions", nuclib, opts,
-//     1.e-2, false, true);
+    std::cout<<"R-process condition: T0 = "<<T0<<"\tYe = "<<Ye<<"\ts = "<<s<<"\ttau = "<<tau<<std::endl;
+    std::cout<<"Path to output file: "<<outputname<<std::endl;
+    std::cout<<"Path to reactlib: "<<reaclibdatabase<<std::endl<<std::endl;
 
-  ReactionLibs reactionLibraries { &strongReactionLibrary, &symmetricFission,
-    &spontaneousFission, &weakReactionLibrary };
 
-//  ReactionLibs reactionLibraries { &strongReactionLibrary, &symmetricFission,
-//    &spontaneousFission, &weakReactionLibrary,  &neutrinoLibrary,
-//    &ffnMesaReactionLibrary, &ffnReactionLibrary };
+    auto nuclib = NuclideLibrary::CreateFromWebnucleoXML(
+                SkyNetRoot + "/data/webnucleo_nuc_v2.0.xml");
 
-  ReactionNetwork net(nuclib, reactionLibraries, &helm, &screen, opts);
-  NSE nse(net.GetNuclideLibrary(), &helm, &screen);
+    NetworkOptions opts;
+    opts.ConvergenceCriterion = NetworkConvergenceCriterion::Mass;
+    opts.MassDeviationThreshold = 1.0E-10;
+    opts.IsSelfHeating = true;
+    opts.EnableScreening = true;
 
-  double T0 = 10.0;
-  double Ye = 0.17;
-  double s = 30.0;
-  double tau = 25.0;
+    SkyNetScreening screen(nuclib);
+    HelmholtzEOS helm(SkyNetRoot + "/data/helm_table.dat");
 
-  // run NSE with the temperature and entropy to find the initial density
-  auto nseResult = nse.CalcFromTemperatureAndEntropy(T0, s, Ye);
+    REACLIBReactionLibrary strongReactionLibrary(reaclibdatabase,
+                                                 ReactionType::Strong, true, LeptonMode::TreatAllAsDecayExceptLabelEC,
+                                                 "Strong reactions", nuclib, opts, true);
+    REACLIBReactionLibrary symmetricFission(SkyNetRoot +
+                                            "/data/netsu_panov_symmetric_0neut", ReactionType::Strong, false,
+                                            LeptonMode::TreatAllAsDecayExceptLabelEC,
+                                            "Symmetric neutron induced fission with 0 free neutrons", nuclib, opts,
+                                            false);
+    REACLIBReactionLibrary spontaneousFission(SkyNetRoot +
+                                              "/data/netsu_sfis_Roberts2010rates", ReactionType::Strong, false,
+                                              LeptonMode::TreatAllAsDecayExceptLabelEC, "Spontaneous fission", nuclib,
+                                              opts, false);
 
-  auto densityProfile = ExpTMinus3(nseResult.Rho(), tau / 1000.0);
+    // use only REACLIB weak rates
+    REACLIBReactionLibrary weakReactionLibrary(reaclibdatabase,
+                                               ReactionType::Weak, false, LeptonMode::TreatAllAsDecayExceptLabelEC,
+                                               "Weak reactions", nuclib, opts, true);
 
-  auto output = net.EvolveSelfHeatingWithInitialTemperature(nseResult.Y(), 0.0,
-      1.0E9, T0, &densityProfile, "SkyNet_r-process");
+    // or use the following code to use FFN rates and weak REACLIB rates
+    // pre-computed with the <SkyNetRoot>/examples/precompute_reaction_libs.py
+    // script
+    //  auto ffnMesaReactionLibrary = FFNReactionLibrary::ReadFromDisk(
+    //      "ffnMesa_with_neutrino", opts);
+    //  auto ffnReactionLibrary = FFNReactionLibrary::ReadFromDisk(
+    //      "ffn_with_neutrino_ffnMesa", opts);
+    //  auto weakReactionLibrary = REACLIBReactionLibrary::ReadFromDisk(
+    //      "weak_REACLIB_with_neutrino_ffnMesa_ffn", opts);
 
-  std::vector<double> finalYVsA = output.FinalYVsA();
+    // add neutrino reactions, if desired (will need a neutrino distribution
+    // function set with net.LoadNeutrinoHistory(...))
+    //  NeutrinoReactionLibrary neutrinoLibrary(SkyNetRoot
+    //     + "/data/neutrino_reactions.dat", "Neutrino interactions", nuclib, opts,
+    //     1.e-2, false, true);
 
-  FILE * f = fopen("final_y_r-process", "w");
-  for (unsigned int A = 0; A < finalYVsA.size(); ++A)
-    fprintf(f, "%6i  %30.20E\n", A, finalYVsA[A]);
+    ReactionLibs reactionLibraries { &strongReactionLibrary, &symmetricFission,
+                &spontaneousFission, &weakReactionLibrary };
+
+    //  ReactionLibs reactionLibraries { &strongReactionLibrary, &symmetricFission,
+    //    &spontaneousFission, &weakReactionLibrary,  &neutrinoLibrary,
+    //    &ffnMesaReactionLibrary, &ffnReactionLibrary };
+
+    ReactionNetwork net(nuclib, reactionLibraries, &helm, &screen, opts);
+    NSE nse(net.GetNuclideLibrary(), &helm, &screen);
+
+
+
+    // run NSE with the temperature and entropy to find the initial density
+    auto nseResult = nse.CalcFromTemperatureAndEntropy(T0, s, Ye);
+
+    auto densityProfile = ExpTMinus3(nseResult.Rho(), tau / 1000.0);
+
+    auto output = net.EvolveSelfHeatingWithInitialTemperature(nseResult.Y(), 0.0,
+                                                              1.0E9, T0, &densityProfile, outputname);
+
+
+    std::vector<double> finalYVsA = output.FinalYVsA();
+    std::vector<double> finalY = output.FinalY();
+
+    char outputname_txt[500];
+    sprintf(outputname_txt,"%s.txt",outputname);
+    char outputname_all_txt[500];
+    sprintf(outputname_all_txt,"%s_all.txt",outputname);
+
+    FILE * f = fopen(outputname_txt, "w");
+    for (unsigned int A = 0; A < finalYVsA.size(); ++A)
+        fprintf(f, "%6i  %30.20E\n", A, finalYVsA[A]);
+    FILE * f2 = fopen(outputname_txt, "w");
+    for (unsigned int A = 0; A < finalY.size(); ++A)
+        fprintf(f2, "%6i  %30.20E\n", A, finalY[A]);
+
+
 }
 
