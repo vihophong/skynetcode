@@ -24,6 +24,9 @@ Go to parent directory
 
 
 mkdir build-skynetcode
+
 cd build-skynetcode
+
 cmake ../skynetcode
+
 make
