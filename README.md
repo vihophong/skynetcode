@@ -12,10 +12,13 @@ Requirement: cmake3 and skynet code installed
 Define enviroment variables in ~/.bashrc
 
 export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries/linux/mkl/lib/intel64:$LD_LIBRARY_PATH
+
 export PYTHONPATH=/home/phong/projects/SkyNet/install/skynet-install/lib:$PYTHONPATH
 
 export SKYNETSYS=/home/phong/projects/SkyNet/install/skynet-install/lib/cmake/SkyNet
+
 export MKLROOT=/opt/intel/compilers_and_libraries/linux/mkl
+
 
 go to parent directory
 mkdir build-skynetcode
