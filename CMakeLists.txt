@@ -15,6 +15,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 
 project(skynetuser1 CXX C Fortran)
 
+# You need to tell CMake where to find the ROOT installation. This can be done in a number of ways:
+#   - ROOT built with classic configure/make use the provided $ROOTSYS/etc/cmake/FindROOT.cmake
+#   - ROOT built with CMake. Add in CMAKE_PREFIX_PATH the installation prefix for ROOT
+list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+
 # enable warnings
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
@@ -52,9 +57,10 @@ list(APPEND CMAKE_PREFIX_PATH $ENV{SKYNETSYS})
 # find skynet
 find_package(SkyNet REQUIRED)
 
-
+#---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
+find_package(ROOT REQUIRED COMPONENTS MathCore RIO Hist Tree Spectrum Net)
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
-#include(${ROOT_USE_FILE})
+include(${ROOT_USE_FILE})
 
 include_directories(${CMAKE_SOURCE_DIR} ${ROOT_INCLUDE_DIRS})
 add_definitions(${ROOT_CXX_FLAGS})
@@ -75,4 +81,4 @@ include_directories(${CMAKE_SOURCE_DIR} ${SKYNET_INCLUDE_DIRS})
 #---Create  a main program using the library
 add_executable(r-process r-process.cpp)
 target_link_libraries(r-process ${SKYNET_LIBRARIES})
-#target_link_libraries(r-process ${ROOT_LIBRARIES})   # Link2Dictionary!
+target_link_libraries(r-process ${ROOT_LIBRARIES})   # Link2Dictionary!
