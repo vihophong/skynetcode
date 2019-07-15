@@ -29,86 +29,29 @@
 #include "TF1.h"
 
 using namespace std;
-void plota(char* infilelist,char* innamelist=0)
+
+
+void makeyvsz(char* infile, char* outfile)
 {
-    TCanvas *c1=new TCanvas("c1","aaa",900,700);
-    c1->SetLogy();
-    ifstream fdat;
-    fdat.open("/home/phong/projects/SkyNet/runskynet/abundance_ref/r-abundance.txt");
-    Double_t nmass[141];
-    Double_t stan[141];
-    Double_t min[141];
-    Double_t max[141];
-    Double_t temp2,fmin,fmax;
-    for (Int_t i=0;i<141;i++){
-      fdat>>temp2>>nmass[i]>>stan[i]>>fmin>>fmax;
-      //cout<<i<<"\t"<<nmass[i]<<"\t"<<stan[i]<<endl;
-      min[i]=stan[i]-fmin;
-      max[i]=fmax-stan[i];
+    string x;
+    ifstream fin(infile);
+    string breakstring="# [6] = initial abundance (of Z)";
+    while (!fin.eof()){
+        std::getline(fin,x);
+        if(!x.compare(breakstring)) break;
     }
-    Double_t stan_153Eu=stan[84];
+    Double_t temp;
+    Double_t z;
+    Double_t y;
 
-    TGraphAsymmErrors* gr1=new TGraphAsymmErrors(141,nmass,stan,0,0,min,max);
-    gr1->SetMarkerStyle(20);
-    gr1->SetFillColor(0);
-    gr1->GetYaxis()->SetRangeUser(1e-3,1e3);
-    gr1->Draw("AP");
+    ofstream fout(outfile);
 
-    std::ifstream ifs(infilelist);
-    string filelist[1000];
-    Int_t nfiles=0;
-    while (!ifs.eof()){
-        ifs>>filelist[nfiles];
-        cout<<filelist[nfiles]<<endl;
-        nfiles++;
+    while (!fin.eof()){
+        fin>>temp>>temp>>temp>>z>>y>>temp;
+        if (z==0&&y==0) break;
+        fout<<z<<"\t"<<y<<endl;
     }
-    nfiles=nfiles-1;
-    cout<<"There are "<<nfiles<<" files in total!"<<endl;
-
-    string namelist[1000];
-    Int_t nlines=0;
-    if (innamelist){
-        std::ifstream ifsname(innamelist);
-        while (!ifsname.eof()){
-            std::getline(ifsname,namelist[nlines]);
-            nlines++;
-        }
-        nlines=nlines-1;
-        cout<<"There are "<<nlines<<" lines in total!"<<endl;
-    }
-
-    TGraph *grs[nfiles];
-    Int_t colorcode=2;
-    for (Int_t i=0;i<nfiles;i++){
-        if (colorcode==4) colorcode++;
-        grs[i]=new TGraph(filelist[i].c_str(),"%lg %lg");
-        grs[i]->SetLineColor(colorcode);
-        grs[i]->SetFillColor(0);
-        Double_t normfactor=1;
-        for (Int_t j=0;j<grs[i]->GetN();j++){
-            if (grs[i]->GetX()[j]==153) normfactor=grs[i]->GetY()[j];
-        }
-        normfactor=stan_153Eu/normfactor;
-
-        for (Int_t j=0;j<grs[i]->GetN();j++){
-            grs[i]->GetY()[j]=normfactor*grs[i]->GetY()[j];
-        }
-        grs[i]->Draw("SAME");
-        colorcode++;
-    }
-    grs[0]->Draw("SAME");
-    //grs[1]->Draw("SAME");
-
-    TLegend* leg = new TLegend(0.1,0.65,0.38,0.9);
-    leg->AddEntry(gr1,"SS r-abudances");
-    for (Int_t i=0;i<nfiles;i++){
-        if (innamelist) leg->AddEntry(grs[i], namelist[i].c_str());
-        else leg->AddEntry(grs[i], filelist[i].c_str());
-    }
-    leg->SetBorderSize(0);
-    leg->Draw();
 }
-
 
 int main(int argc, char**argv) {
     //! read inputs
@@ -212,21 +155,29 @@ int main(int argc, char**argv) {
     auto output = net.EvolveSelfHeatingWithInitialTemperature(nseResult.Y(), 0.0,
                                                               1.0E9, T0, &densityProfile, outputname);
 
+
+    //! Outputs
     std::vector<double> finalYVsA = output.FinalYVsA();
-    std::vector<double> finalY = output.FinalY();
 
-    char outputname_txt[500];
-    sprintf(outputname_txt,"%s.txt",outputname);
-    char outputname_all_txt[500];
-    sprintf(outputname_all_txt,"%s_all.txt",outputname);
+    char outputname_yvsa_txt[500];
+    sprintf(outputname_yvsa_txt,"%s_YvsA.txt",outputname);
 
-    FILE * f = fopen(outputname_txt, "w");
+    FILE * f = fopen(outputname_yvsa_txt, "w");
     for (unsigned int A = 0; A < finalYVsA.size(); ++A)
         fprintf(f, "%6i  %30.20E\n", A, finalYVsA[A]);
-    FILE * f2 = fopen(outputname_txt, "w");
-    for (unsigned int A = 0; A < finalY.size(); ++A)
-        fprintf(f2, "%6i  %30.20E\n", A, finalY[A]);
 
+
+    char outputname_h5[500];
+    sprintf(outputname_h5,"%s.h5",outputname);
+
+    output.MakeDatFile(outputname_h5);
+
+    char inputdatfile[500];
+    sprintf(inputdatfile,"%s.dat",outputname_h5);
+
+    char outputname_yvsz_txt[500];
+    sprintf(outputname_yvsz_txt,"%s_YvsZ.txt",outputname);
+    makeyvsz(inputdatfile,outputname_yvsz_txt);
 }
 
 
